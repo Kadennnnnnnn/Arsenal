@@ -48,164 +48,84 @@ if game.PlaceId == placeid then
         end
     end)
 
-    MainSection:NewButton("Gun Mods", "Allows you to remove recoil, always auto, etc.", function(v)
-local Functions = {}
-	for i,v in pairs(getreg()) do
-		if type(v) == "function" then
-			for i2,v2 in pairs(getfenv(v)) do
-				if type(v2) == "function" then
-					Functions[tostring(i2)] = v2
-				end
-			end
-		end
-	end
-
-	function GetLocalWeapon()
-		return getfenv(Functions.usethatgun).gun
-	end
-
-	game:GetService("RunService"):BindToRenderStep("gunmodsarecool", 1, function()
-		getfenv(Functions.usethatgun).currentspread = 0 -- NoSpread
-
-		getfenv(Functions.usethatgun).recoil = 0 -- NoRecoil
-
-		if GetLocalWeapon() ~= "none" and GetLocalWeapon():FindFirstChild("Ammo") then -- Inf Ammo
-			debug.setupvalue(Functions["updateInventory"], 3, GetLocalWeapon():FindFirstChild("Ammo").Value)
-		end
-
-		if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Spawned") and game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then -- RapidFire
-			if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid").Health ~= 0 and game.Players.LocalPlayer.Character:FindFirstChild("Spawned") then
-				pcall(function()
-					Functions.firebullet(true)
-				end)
-			end
-		end
-	end)
+    MainSection:NewButton("Kill all", "Kills everyone in the server", function(v)
+		local Gun = game.ReplicatedStorage.Weapons:FindFirstChild(game.Players.LocalPlayer.NRPBS.EquippedTool.Value);
+        local Crit = math.random() > .6 and true or false;
+        for i,v in pairs(game.Players:GetPlayers()) do
+            if v and v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+                for i =1,10 do
+                    local Distance = (game.Players.LocalPlayer.Character.Head.Position - v.Character.Head.Position).magnitude 
+                    game.ReplicatedStorage.Events.HitPart:FireServer(v.Character.Head, -- Hit Part
+                    v.Character.Head.Position + Vector3.new(math.random(), math.random(), math.random()), -- Hit Position
+                    Gun.Name, 
+                    Crit and 2 or 1, 
+                    Distance,
+                    Backstab, 
+                    Crit, 
+                    false, 
+                    1, 
+                    false, 
+                    Gun.FireRate.Value,
+                    Gun.ReloadTime.Value,
+                    Gun.Ammo.Value,
+                    Gun.StoredAmmo.Value,
+                    Gun.Bullets.Value,
+                    Gun.EquipTime.Value,
+                    Gun.RecoilControl.Value,
+                    Gun.Auto.Value,
+                    Gun['Speed%'].Value,
+                    game.ReplicatedStorage.wkspc.DistributedTime.Value);
+                end 
+            end
+        end
     end)
 
 MainSection:NewButton("Silent Aim", "Allows you to use Silent Aim", function()
-local Players = game:GetService("Players")
+	local CurrentCamera = workspace.CurrentCamera
+local Players = game.GetService(game, "Players")
 local LocalPlayer = Players.LocalPlayer
-local mouse = LocalPlayer:GetMouse()
-local Camera = workspace.CurrentCamera
-local Debris = game:GetService("Debris")
-local UserInputService = game:GetService("UserInputService")
-local target = false
-local RunService = game:GetService("RunService")
-
-
-getfenv().lock = "Head" -- Head Hitbox, or Random
-
-fov = 250;
-local fovCircle = true;
-local st = tonumber(tick());
-
-if fovCircle then
-	function createcircle()
-	    local a=Drawing.new('Circle');a.Transparency=1;a.Thickness=1.5;a.Visible=true;a.Color=Color3.fromRGB(0,255,149);a.Filled=false;a.Radius=fov;
-	    return a;
-	end;  
-	local fovc = createcircle();
-	spawn(function()
-	    RunService:BindToRenderStep("FovCircle",1,function()
-	        fovc.Position = Vector2.new(mouse.X,mouse.Y)
-	    end);
-	end);
-end;
-
-function isFfa()
-	local am = #Players:GetChildren();
-	local amm = 0;
-	for i , v in pairs(Players:GetChildren()) do
-		if v.Team == LocalPlayer.Team then
-			amm = amm + 1;
-		end;
-	end;
-	return am == amm;
-end;
-function getnearest()
-	local nearestmagnitude = math.huge
-	local nearestenemy = nil
-	local vector = nil
-	local ffa = isFfa();
-	for i,v in next, Players:GetChildren() do
-		if ffa == false and v.Team ~= LocalPlayer.Team or ffa == true then
-			if v.Character and  v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
-				local vector, onScreen = Camera:WorldToScreenPoint(v.Character["HumanoidRootPart"].Position)
-				if onScreen then
-					local ray = Ray.new(
-					Camera.CFrame.p,
-					(v.Character["Head"].Position-Camera.CFrame.p).unit*500
-					)
-					local ignore = {
-					LocalPlayer.Character,
-					}
-					local hit,position,normal=workspace:FindPartOnRayWithIgnoreList(ray,ignore)
-					if hit and hit:FindFirstAncestorOfClass("Model") and Players:FindFirstChild(hit:FindFirstAncestorOfClass("Model").Name)then
-						local magnitude = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(vector.X, vector.Y)).magnitude
-						if magnitude < nearestmagnitude and magnitude <= fov then
-							nearestenemy = v
-							nearestmagnitude = magnitude
-						end
-					end
-				end
-			end
-		end
-	end
-	return nearestenemy
+local Mouse = LocalPlayer:GetMouse()
+function ClosestPlayer()
+    local MaxDist, Closest = math.huge
+    for I,V in pairs(Players.GetPlayers(Players)) do
+        if V == LocalPlayer then continue end
+        if V.Team == LocalPlayer then continue end
+        if not V.Character then continue end
+        local Head = V.Character.FindFirstChild(V.Character, "Head")
+        if not Head then continue end
+        local Pos, Vis = CurrentCamera.WorldToScreenPoint(CurrentCamera, Head.Position)
+        if not Vis then continue end
+        local MousePos, TheirPos = Vector2.new(Mouse.X, Mouse.Y), Vector2.new(Pos.X, Pos.Y)
+        local Dist = (TheirPos - MousePos).Magnitude
+        if Dist < MaxDist then
+            MaxDist = Dist
+            Closest = V
+        end
+    end
+    return Closest
 end
-
-
-local meta = getrawmetatable(game)
-setreadonly(meta, false)
-local oldNamecall = meta.__namecall
-meta.__namecall = newcclosure(function(...)
-    
-	local method = getnamecallmethod()
-	local args = {...}
-	if string.find(method,'Ray') then
-		if target then
-		    if args[1].Name ~= "Workspace" then
-   		        print(args[1])
-   		    end;
-			args[2] = Ray.new(workspace.CurrentCamera.CFrame.Position, (target.Position + Vector3.new(0,(workspace.CurrentCamera.CFrame.Position-target.Position).Magnitude/500,0) - workspace.CurrentCamera.CFrame.Position).unit * 5000)
-		end
-	end
-	return oldNamecall(unpack(args))
+local MT = getrawmetatable(game)
+local OldNC = MT.__namecall
+local OldIDX = MT.__index
+setreadonly(MT, false)
+MT.__namecall = newcclosure(function(self, ...)
+    local Args, Method = {...}, getnamecallmethod()
+    if Method == "FindPartOnRayWithIgnoreList" and not checkcaller() then
+        local CP = ClosestPlayer()
+        if CP and CP.Character and CP.Character.FindFirstChild(CP.Character, "Head") then
+            Args[1] = Ray.new(CurrentCamera.CFrame.Position, (CP.Character.Head.Position - CurrentCamera.CFrame.Position).Unit * 1000)
+            return OldNC(self, unpack(Args))
+        end
+    end
+    return OldNC(self, ...)
 end)
-
-RunService:BindToRenderStep("SilentAim",1,function()
-	if UserInputService:IsMouseButtonPressed(0) and Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("Humanoid") and Players.LocalPlayer.Character.Humanoid.Health > 0 then
-		local enemy = getnearest()
-		if enemy and enemy.Character and enemy.Character:FindFirstChild("Humanoid") and enemy.Character.Humanoid.Health > 0 then                
-			local vector, onScreen = Camera:WorldToScreenPoint(enemy.Character["Head"].Position)
-			local head = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(vector.X, vector.Y)).magnitude
-			local vector, onScreen = Camera:WorldToScreenPoint(enemy.Character["HumanoidRootPart"].Position)
-			local hitbox = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(vector.X, vector.Y)).magnitude
-			if head <= hitbox then
-				magnitude = head
-			else
-				magnitude = hitbox;
-			end;
-			if getfenv().lock == "Head" then
-				target = workspace[enemy.Name]["Head"]
-			else
-				if getfenv().lock == "Random" then
-					if magnitude == hitbox then
-						target = workspace[enemy.Name]["HumanoidRootPart"];
-					else
-						target = workspace[enemy.Name]["Head"]
-					end;
-				else
-					target = workspace[enemy.Name]["HumanoidRootPart"];
-				end;
-
-			end;
-		else
-			target = nil
-		end
-	end
+MT.__index = newcclosure(function(self, K)
+    if K == "Clips" then
+        return workspace.Map
+    end
+    return OldIDX(self, K)
 end)
+setreadonly(MT, true)
 end)
 
 
@@ -214,80 +134,117 @@ end)
     local PlayerSection = Player:NewSection("Player")
 
     PlayerSection:NewButton("ESP", "ButtonInfo", function()
-        local localPlayer=game.Players.LocalPlayer
+		local Holder = Instance.new("Folder", game.CoreGui)
+Holder.Name = "ESP"
 
-        function highlightModel(objObject)
-           for i,v in pairs(objObject:children())do
-               if v:IsA'BasePart'and v.Name~='HumanoidRootPart'then
-                   local bHA=Instance.new('BoxHandleAdornment',v)
-                   bHA.Adornee=v
-                   bHA.Size= v.Name=='Head' and Vector3.new(1.25,1.25,1.25) or v.Size
-                   bHA.Color3=v.Name=='Head'and Color3.new(1,0,0)or v.Name=='Torso'and Color3.new(0,1,0)or Color3.new(0,0,1)
-                   bHA.Transparency=.5
-                   bHA.ZIndex=1
-                   bHA.AlwaysOnTop=true
-               end
-               if #v:children()>0 then
-                   highlightModel(v)
-               end
-           end
-        end
-        
-        function unHighlightModel(objObject)
-           for i,v in pairs(objObject:children())do
-               if v:IsA'BasePart' and v:findFirstChild'BoxHandleAdornment' then
-                   v.BoxHandleAdornment:Destroy()
-               end
-               if #v:children()>0 then
-                   unHighlightModel(v)
-               end
-           end
-        end
-        
-        function sortTeamHighlights(objPlayer)
-           repeat wait() until objPlayer.Character
-           if objPlayer.TeamColor~=localPlayer.TeamColor then
-               highlightModel(objPlayer.Character)
-           else
-               unHighlightModel(objPlayer.Character)
-           end
-           if objPlayer~=localPlayer then
-               objPlayer.Changed:connect(function(strProp)
-                   if strProp=='TeamColor'then
-                       if objPlayer.TeamColor~=localPlayer.TeamColor then
-                           unHighlightModel(objPlayer.Character)
-                           highlightModel(objPlayer.Character)
-                       else
-                           unHighlightModel(objPlayer.Character)
-                       end
-                   end
-               end)
-           else
-               objPlayer.Changed:connect(function(strProp)
-                   if strProp=='TeamColor'then
-                       wait(.5)
-                       for i,v in pairs(game.Players:GetPlayers())do
-                           unHighlightModel(v)
-                           if v.TeamColor~=localPlayer.TeamColor then
-                               highlightModel(v.Character)
-                           end
-                       end
-                   end
-               end)
-           end
-        end
-        
-        for i,v in pairs(game.Players:GetPlayers())do
-           v.CharacterAdded:connect(function()
-               sortTeamHighlights(v)
-           end)
-           sortTeamHighlights(v)
-        end
-        game.Players.PlayerAdded:connect(function(objPlayer)
-           objPlayer.CharacterAdded:connect(function(objChar)
-               sortTeamHighlights(objPlayer)
-           end)
-        end)
+local Box = Instance.new("BoxHandleAdornment")
+Box.Name = "nilBox"
+Box.Size = Vector3.new(4, 7, 4)
+Box.Color3 = Color3.new(100 / 255, 100 / 255, 100 / 255)
+Box.Transparency = 0.7
+Box.ZIndex = 0
+Box.AlwaysOnTop = true
+Box.Visible = true
+
+local NameTag = Instance.new("BillboardGui")
+NameTag.Name = "nilNameTag"
+NameTag.Enabled = false
+NameTag.Size = UDim2.new(0, 200, 0, 50)
+NameTag.AlwaysOnTop = true
+NameTag.StudsOffset = Vector3.new(0, 1.8, 0)
+local Tag = Instance.new("TextLabel", NameTag)
+Tag.Name = "Tag"
+Tag.BackgroundTransparency = 1
+Tag.Position = UDim2.new(0, -50, 0, 0)
+Tag.Size = UDim2.new(0, 300, 0, 20)
+Tag.TextSize = 20
+Tag.TextColor3 = Color3.new(100 / 255, 100 / 255, 100 / 255)
+Tag.TextStrokeColor3 = Color3.new(0 / 255, 0 / 255, 0 / 255)
+Tag.TextStrokeTransparency = 0.4
+Tag.Text = "nil"
+Tag.Font = Enum.Font.SourceSansBold
+Tag.TextScaled = false
+
+local LoadCharacter = function(v)
+	repeat wait() until v.Character ~= nil
+	v.Character:WaitForChild("Humanoid")
+	local vHolder = Holder:FindFirstChild(v.Name)
+	vHolder:ClearAllChildren()
+	local b = Box:Clone()
+	b.Name = v.Name .. "Box"
+	b.Adornee = v.Character
+	b.Parent = vHolder
+	local t = NameTag:Clone()
+	t.Name = v.Name .. "NameTag"
+	t.Enabled = true
+	t.Parent = vHolder
+	t.Adornee = v.Character:WaitForChild("Head", 5)
+	if not t.Adornee then
+		return UnloadCharacter(v)
+	end
+	t.Tag.Text = v.Name
+	b.Color3 = Color3.new(v.TeamColor.r, v.TeamColor.g, v.TeamColor.b)
+	t.Tag.TextColor3 = Color3.new(v.TeamColor.r, v.TeamColor.g, v.TeamColor.b)
+	local Update
+	local UpdateNameTag = function()
+		if not pcall(function()
+			v.Character.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+			
+		end) then
+			Update:Disconnect()
+		end
+	end
+	UpdateNameTag()
+	Update = v.Character.Humanoid.Changed:Connect(UpdateNameTag)
+end
+
+local UnloadCharacter = function(v)
+	local vHolder = Holder:FindFirstChild(v.Name)
+	if vHolder and (vHolder:FindFirstChild(v.Name .. "Box") ~= nil or vHolder:FindFirstChild(v.Name .. "NameTag") ~= nil) then
+		vHolder:ClearAllChildren()
+	end
+end
+
+local LoadPlayer = function(v)
+	local vHolder = Instance.new("Folder", Holder)
+	vHolder.Name = v.Name
+	v.CharacterAdded:Connect(function()
+		pcall(LoadCharacter, v)
+	end)
+	v.CharacterRemoving:Connect(function()
+		pcall(UnloadCharacter, v)
+	end)
+	v.Changed:Connect(function(prop)
+		if prop == "TeamColor" then
+			UnloadCharacter(v)
+			wait()
+			LoadCharacter(v)
+		end
+	end)
+	LoadCharacter(v)
+end
+
+local UnloadPlayer = function(v)
+	UnloadCharacter(v)
+	local vHolder = Holder:FindFirstChild(v.Name)
+	if vHolder then
+		vHolder:Destroy()
+	end
+end
+
+for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+	spawn(function() pcall(LoadPlayer, v) end)
+end
+
+game:GetService("Players").PlayerAdded:Connect(function(v)
+	pcall(LoadPlayer, v)
+end)
+
+game:GetService("Players").PlayerRemoving:Connect(function(v)
+	pcall(UnloadPlayer, v)
+end)
+
+game:GetService("Players").LocalPlayer.NameDisplayDistance = 0
     end)
 
     PlayerSection:NewButton("Rejoin", "Rejoin's the game", function()
